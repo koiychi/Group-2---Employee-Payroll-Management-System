@@ -13,6 +13,13 @@ public class EPMSystem {
     */ 
     
     static Scanner input = new Scanner(System.in);
+    static String empID = "";
+    static String empDept = "";
+    static String empName = "";
+    static double empSalary = 0.0;
+    static double empTaxR = 0.0;
+
+
     //ARRAYLIST: Identifier: employeeRecords
     static ArrayList<Employee> employeeRecords = new ArrayList<>();
 
@@ -42,7 +49,7 @@ public class EPMSystem {
         return response;
     }
 
-    static void showDepartments() {
+    static void showSelectDepartments() {
         System.out.println("COMPANY DEPARTMENTS");
         System.out.println("[1] IT");
         System.out.println("[2] Marketing");
@@ -51,6 +58,26 @@ public class EPMSystem {
         System.out.println("[5] Sales ");
         System.out.println("[6] Operations ");
         System.out.println("[7] Customer Service ");
+
+        System.out.println("Enter Department: ");
+        try {
+            int choice = Integer.parseInt(input.nextLine());
+            switch (choice) {
+                case 1: empDept = "IT"; break;
+                case 2: empDept = "Marketing"; break;
+                case 3: empDept = "HR"; break;
+                case 4: empDept = "Accounting"; break;
+                case 5: empDept = "Sales"; break;
+                case 6: empDept = "Operations"; break;
+                case 7: empDept = "Customer Service"; break;
+                default:
+                    System.out.println("Invalid choice. Please select a valid option.");
+                    return;
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid input. Defaulting to 'IT'.");
+            return;
+        }
     } 
 
     // --- EMPLOYEE CLASS ---
@@ -83,14 +110,39 @@ public class EPMSystem {
         System.out.println("\n========================================");
         System.out.println("          ADD AN EMPLOYEE RECORD         ");
         System.out.println("========================================");
-        System.out.println("(Enter 'X' at any prompt to cancel operation)\n");
+        System.out.println("(Enter 'X' at any prompt to cancel operation)\n"); 
+        
+    //
+        String empID = "";
+        boolean unique = false;
+        
+        while(!unique){ //Hangga't di pa unique yung id, tuloy ang loop
+            empID = ask("Enter Employee ID: ");
+            
+            unique = true; // Assume unique initially
+            for(Employee e : employeeRecords){ // isa-isang ichecheck lahat ng employee sa arraylist
+                if(e.id.equalsIgnoreCase(empID)){  // ichcheck kung yung ID ng current employee ay match sa ininput
+                    System.out.println("An employee with the same ID is already existing. Try with another ID or delete the existing record.");
+                    unique = false; // Not unique, continue loop
+                    break;
+                }
+            }
+        }
 
-        String empID = ask("Enter Employee ID: "); 
+
+
+    //
         String empName = ask("Enter Full Name: ");
-        showDepartments();
-        String empDept = ask("Enter (Type muna) Department: ");
+        showSelectDepartments();
+        
         double empSalary = Double.parseDouble(ask("Enter Monthly Salary: "));
-        double empTaxR = Double.parseDouble(ask("Enter Tax Rate (%): "));
+        try {
+            double empTaxR = Double.parseDouble(ask("Enter Tax Rate (%): "));
+        } catch (InputMismatchException e) {
+            System.out.println("[NOTICE] Only numbers are accepted here. Kindly enter a valid number.");
+            return;
+        }
+        
 
         String confirm = ask("SAVE Record? (Y/N): ");
 
@@ -133,16 +185,22 @@ public class EPMSystem {
                 System.out.println("Employee not found. Please try again.");
             }
         }
+        //temporary variables; fix for saving issue
+        String tempID = found.id;
+        String tempName = found.name;
+        String tempDept = found.department;
+        double tempSalary = found.salary;
+        double tempTax = found.taxRate;
         
         //dito na pwedeng mamili si user ng gusto niyang i-edit
         boolean edit = true;
         while(edit){
             System.out.println("\nCurrent Details: ");
-            System.out.println("[1] ID: " + found.id);
-            System.out.println("[2] Name: " + found.name);
-            System.out.println("[3] Department: " + found.department);
-            System.out.println("[4] Salary: " + found.salary);
-            System.out.println("[5] Tax Rate: " + found.taxRate + "%");
+            System.out.println("[1] ID: " + tempID);
+            System.out.println("[2] Name: " + tempName);
+            System.out.println("[3] Department: " + tempDept);
+            System.out.println("[4] Salary: " + tempSalary);
+            System.out.println("[5] Tax Rate: " + tempTax + "%");
             System.out.println("[0] Exit Editing");
             
             // Exception handling para maiwasan ang error kung mali ang na-input (handled by try-catch in main)
@@ -152,17 +210,28 @@ public class EPMSystem {
             
             switch (choice){
                 case 1: // Edit ID
-                    String idNumber = ask("Enter new ID number: ");
-                    if(!idNumber.isBlank()){
-                        found.id = found.department.toUpperCase() + "-" + idNumber; //auto format;no need for user to type it manually: dept-id (IT-1234)
-                        System.out.println("ID updated to: " + found.id);
+                    String newID = ask("Enter new ID: ");
+                    if(!newID.isBlank()){
+                        boolean unique = true;
+                        for(Employee e : employeeRecords){
+                            if(e.id.equalsIgnoreCase(newID) && !e.id.equalsIgnoreCase(tempID)){
+                                System.out.println("An employee with the same ID is already existing. Try with another ID or delete the existing record.");
+                                unique = false;
+                                break;
+                            }
+                        }
+                        if(unique){
+                            tempID = newID;
+                            System.out.println("ID updated to: " + tempID);
+                        }
                     }
                     break;
+                    
                 case 2:
                     String newName = ask("Enter new Name: ");
                     // may ininput = i-uupdate; kung blank = keep old value
                     if(!newName.isBlank()){
-                        found.name = newName;
+                        tempName = newName;
                         System.out.println("Name updated.");
                     }
                     break;
@@ -170,28 +239,42 @@ public class EPMSystem {
                     String newDept = ask("Enter new Department: ");
                     // check kung may input
                     if(!newDept.isBlank()){
-                        found.department = newDept.toUpperCase();
-                        String[] parts = found.id.split("-", 2); // hinati lang ang current ID using "-";  Example: "IT-12345" -> parts[0]="IT", parts[1]="12345"
-                        if(parts.length == 2){ // make sure the format is correct (may dalawang parts)
-                            // Combine new department + old ID number
-                            found.id = found.department + "-" + parts[1];
-                        }
-                        System.out.println("Department updated. ID is now: " + found.id);
+                        tempDept = newDept.toUpperCase();
+                        //okie na :DD (ata)
+                        System.out.println("Department updated. ID is now: " + tempDept);
                     }
                     break;
+                    
                 case 4:
-                    double newSalary = Double.parseDouble(ask("Enter new Salary: "));
-                    found.salary = newSalary;
-                    System.out.println("Salary updated.");
+                    try{
+                        double newSalary = Double.parseDouble(ask("Enter new Salary: "));
+                        tempSalary = newSalary;
+                        System.out.println("Salary updated.");
+                    } catch (NumberFormatException e){
+                        System.out.println("Invalid salary input");
+                    }
                     break;
+                    
                 case 5:
-                    double newTax = Double.parseDouble(ask("Enter new Tax Rate (%): "));
-                    found.taxRate = newTax;
-                    System.out.println("Tax Rate updated.");
+                    try{
+                        double newTax = Double.parseDouble(ask("Enter new Tax Rate (%): "));
+                        tempTax = newTax;
+                        System.out.println("Tax Rate updated.");
+                    } catch (NumberFormatException e){
+                        System.out.println("Invalid tax input");
+                    }
                     break;
                 case 0:
                     String confirm = ask("Save the changes? (Y/N): "); //confirmation
+                    
                     if(confirm.equalsIgnoreCase("Y")){ // pwedeng lowercase or uppercase ang itype
+                        //fix main issue
+                        found.id = tempID;
+                        found.name = tempName;
+                        found.department = tempDept;
+                        found.salary = tempSalary;
+                        found.taxRate = tempTax;
+                        
                         found.netSalary = found.salary - (found.salary * (found.taxRate / 100)); //recomputation
                         System.out.println("Record updated successfully!");
                     }else{
@@ -204,7 +287,6 @@ public class EPMSystem {
             }
         } catch (Exception e) {
                 System.out.println("Please enter a valid number.");
-                return;
             }
         }
     }
@@ -232,7 +314,7 @@ public class EPMSystem {
             System.out.println("ID:         " + found.id);
             System.out.println("Name:       " + found.name);
             System.out.println("Department: " + found.department);
-            System.out.println("Salary:     ₱" + found.salary);
+            System.out.println("Salary:   Php" + found.salary);
             System.out.println("Tax Rate:   " + found.taxRate + "%");
          
             String confirm = ask("\nDELETE this record? (Y/N): ");
@@ -261,6 +343,7 @@ public class EPMSystem {
         } //empty
         
         double totalSalary = 0;
+        double totalNetSalary = 0;
         
         for(Employee emp : employeeRecords) {
             emp.netSalary = emp.salary - (emp.salary * (emp.taxRate / 100));
@@ -268,11 +351,15 @@ public class EPMSystem {
             System.out.println("EmployeeID: " + emp.id);
             System.out.println("Name: " + emp.name);
             System.out.println("Department: " + emp.department);
-            System.out.println("Computed net salary: " + emp.netSalary);
-            totalSalary += emp.netSalary;
+            System.out.println("Salary: " + emp.salary);
+            System.out.println("Tax Rate: " + emp.taxRate + "%");
+            System.out.println("Net Salary: " + emp.netSalary);
+            totalNetSalary += emp.netSalary;
+            totalSalary += emp.salary;
         } // result
         System.out.println("==============================================");
-        System.out.println("Total net salary: " + totalSalary);
+        System.out.println("Total salary: " + totalSalary);
+        System.out.println("Total net salary: " + totalNetSalary);
         System.out.println("==============================================");
     } // All summary
 
@@ -283,37 +370,20 @@ public class EPMSystem {
         System.out.println("      SEARCH EMPLOYEES BY DEPARTMENT      ");
         System.out.println("==========================================");
         System.out.println("(Enter 'X' at any prompt to cancel operation)\n");
-        showDepartments();
-        int choice = Integer.parseInt(ask("Department: "));
-
-        String dept;
-
-        // Switch
-        switch (choice) {
-            case 1: dept = "IT"; break;
-            case 2: dept = "Marketing"; break;
-            case 3: dept = "HR"; break;
-            case 4: dept = "Accounting"; break;
-            case 5: dept = "Sales"; break;
-            case 6: dept = "Operations"; break;
-            case 7: dept = "Customer Service"; break;
-            default:
-                System.out.println("Invalid choice!");
-                return;
-        }
+        showSelectDepartments();
 
         // Filter List
         ArrayList<Employee> filtered = new ArrayList<>();
 
         for (Employee e : employeeRecords) {
-            if (e.department.equalsIgnoreCase(dept)) {
+            if (e.department.equalsIgnoreCase(empDept)) {
                 filtered.add(e);
             }
         }
 
         // No results
         if (filtered.isEmpty()) {
-            System.out.println("No employees found in " + dept);
+            System.out.println("No employees found in " + empDept);
             return;
         }
 
@@ -324,83 +394,99 @@ public class EPMSystem {
         );
 
         // Display
-        System.out.println("\nEmployees in " + dept + " Department:");
-        System.out.println("ID | Name | Department | Salary");
-        System.out.println("--------------------------------");
+        System.out.println("\nEmployees in " + empDept + " Department:");
+        
+        System.out.printf("%-5s %-15s %-15s %-10s\n",
+        "ID", "Name", "Department", "Salary");
+        System.out.println("---------------------------------------------------");
 
         for (Employee e : filtered) {
-            System.out.println(e.id + " | " + e.name + " | " + e.department + " | " + e.salary);
+          System.out.printf("%-5s %-15s %-15s %-10.2f\n",
+             e.id, e.name, e.department, e.salary);
         }
     }
     
     // GENERATE SUMMARY - CHARLENE
 
     static void genSummary() throws CancelOperation {
-        System.out.println("\n========================================");
-        System.out.println("          GENERATE PAYROLL SUMMARY        ");
-        System.out.println("========================================");
-        System.out.println("(Enter 'X' at any prompt to cancel operation)\n");
-        
-        //if empty terminated
-        if (employeeRecords.isEmpty()){
-            System.out.println("No employee records found.");
-            return;
-        }
-        String confirm = ask("Generate payroll summary file? (Y/N): ");
-        
-        //if no terminated 
-        if (!confirm.equalsIgnoreCase("Y")) {
-            System.out.println("Operation cancelled.");
-            return;
-        }
+    System.out.println("\n========================================");
+    System.out.println("          GENERATE PAYROLL SUMMARY        ");
+    System.out.println("========================================");
+    System.out.println("(Enter 'X' at any prompt to cancel operation)\n");
     
+    if (employeeRecords.isEmpty()){
+        System.out.println("No employee records found.");
+        return;
+    }
+
+    String confirm = ask("Generate payroll summary file? (Y/N): ");
+    
+    if (!confirm.equalsIgnoreCase("Y")) {
+        System.out.println("Operation cancelled.");
+        return;
+    }
+
+    PrintWriter writer = null;
+
+    try {
+        writer = new PrintWriter(new FileWriter("payroll_summary.txt"));
+         
+        // HEADER
+        writer.println("=====================================");
+        writer.println("      EMPLOYEE PAYROLL SUMMARY      ");
+        writer.println("=====================================");
+        writer.printf("%-10s %-20s %-15s %-12s %-12s\n", 
+                "ID", "NAME", "DEPARTMENT", "SALARY", "NET SALARY");
+        writer.println("--------------------------------------------------------------------------");
+
+        double totalSalary = 0;
+        double totalNetSalary = 0;
+
+        // SORT BY DEPARTMENT
         try {
-            PrintWriter writer = new PrintWriter(new FileWriter("payroll_summary.txt"));
-             
-            //id, name, dep, salary, tax0  
-            writer.println("=====================================");
-            writer.println("      EMPLOYEE PAYROLL SUMMARY      ");
-            writer.println("=====================================");
-            writer.printf("%-10s %-20s %-12s %-12s\n" , "ID" , "NAME" , "SALARY", "NET SALARY");
-            writer.println("------------------------------------------------------------");
+            employeeRecords.sort(Comparator.comparing(emp -> emp.department));
+        } catch (Exception e) {
+            System.out.println("[WARNING] Could not sort by department.");
+        }
 
-            double totalSalary = 0;
-            double totalNetSalary = 0;
+        for (Employee emp : employeeRecords) {
+            try {
+                if (emp == null) continue;
 
-            for (Employee emp : employeeRecords) {
                 emp.netSalary = emp.salary - (emp.salary * (emp.taxRate / 100));
 
-                writer.printf("%-10s %-20s %-12.2f %-12.2f\n",
+                // department column
+                writer.printf("%-10s %-20s %-15s %-12.2f %-12.2f\n",
                         emp.id,
                         emp.name,
+                        emp.department,
                         emp.salary,
                         emp.netSalary
                 );
 
                 totalSalary += emp.salary;
                 totalNetSalary += emp.netSalary;
+
+            } catch (Exception e) {
+                System.out.println("[WARNING] Skipping invalid record.");
             }
-
-            writer.println("------------------------------------------------------------");
-            writer.printf("%-31s %-12.2f %-12.2f\n", "TOTAL:", totalSalary, totalNetSalary);
-            writer.println("========================================");
-            writer.close();
-
-            System.out.println("Payroll summary successfully generated!");
-            System.out.println("File saved as: payroll_summary.txt");
-
-        } catch (IOException e) {
-            System.out.println("[ERROR] File writing failed.");
         }
+
+        writer.println("--------------------------------------------------------------------------");
+        writer.printf("%-46s %-12.2f %-12.2f\n", "TOTAL:", totalSalary, totalNetSalary);
+        writer.println("========================================");
+
+        System.out.println("Payroll summary successfully generated!");
+        System.out.println("File saved as: payroll_summary.txt");
+
+    } catch (IOException e) {
+        System.out.println("[ERROR] File writing failed.");
+    } finally {
+        if (writer != null) writer.close();
     }
-            /*
-            0 id NAME IT
-            3 ID NAME IT
-            1 ID NAME ACCOUNTING
-            2 ID NAME ACCOUNTING
+}
             
             
-            */
             
     //MAIN METHOD
     public static void main (String Group2[]) {
@@ -432,10 +518,10 @@ public class EPMSystem {
             } catch (CancelOperation e) {
                 System.out.println("\n>>> Operation Cancelled.");
                 pause();
-            } /*catch (NumberFormatException e) {
+            } catch (NumberFormatException e) {
                 System.out.println("\n[ERROR] Invalid input. Please enter numbers only where required.");
                 pause();
-            }*/
+            }
         }
     } // end of main()
 } //end of EPMS
